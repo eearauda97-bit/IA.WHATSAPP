@@ -17,7 +17,19 @@ export async function POST(request: NextRequest) {
   const rawBody = await request.text();
   const signature = request.headers.get("x-hub-signature-256");
 
-  if (!verifyWebhookSignature(rawBody, signature)) {
+  // A validação em si pode lançar exceção se WHATSAPP_APP_SECRET estiver
+  // ausente do ambiente — isolamos isso num try/catch próprio pra não
+  // derrubar o handler inteiro sem resposta (a Meta reenviaria o evento
+  // repetidamente achando que falhou por timeout).
+  let signatureValid: boolean;
+  try {
+    signatureValid = verifyWebhookSignature(rawBody, signature);
+  } catch (err) {
+    console.error("Webhook WhatsApp: erro ao validar assinatura (env var ausente?):", err);
+    return NextResponse.json({ error: "erro interno de configuração" }, { status: 500 });
+  }
+
+  if (!signatureValid) {
     console.warn("Webhook WhatsApp: assinatura inválida, requisição ignorada.");
     return NextResponse.json({ error: "assinatura inválida" }, { status: 401 });
   }
