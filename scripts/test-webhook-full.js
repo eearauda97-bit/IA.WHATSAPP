@@ -26,10 +26,10 @@ const payload = {
           value: {
             messaging_product: "whatsapp",
             metadata: { phone_number_id: "1317136151489296" },
-            contacts: [{ wa_id: "556293490699", profile: { name: "Enzo Teste" } }],
+            contacts: [{ wa_id: "556255555555", profile: { name: "Teste RealTime7" } }],
             messages: [
               {
-                from: "556293490699",
+                from: "556255555555",
                 id: "wamid.TESTE" + Date.now(),
                 timestamp: String(Math.floor(Date.now() / 1000)),
                 type: "text",
@@ -47,7 +47,7 @@ const payload = {
 const rawBody = JSON.stringify(payload);
 const signature = "sha256=" + crypto.createHmac("sha256", appSecret).update(rawBody, "utf-8").digest("hex");
 
-fetch("http://localhost:3000/api/whatsapp/webhook", {
+fetch("http://localhost:3004/api/whatsapp/webhook", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
