@@ -1,0 +1,30 @@
+﻿{
+  "name": "lista-espera-inteligente",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio"
+  },
+  "dependencies": {
+    "next": "14.2.5",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "@prisma/client": "5.17.0",
+    "next-auth": "4.24.7",
+    "bcryptjs": "2.4.3",
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "prisma": "5.17.0",
+    "typescript": "5.5.4",
+    "@types/node": "20.14.15",
+    "@types/react": "18.3.3",
+    "@types/bcryptjs": "2.4.6"
+  }
+}

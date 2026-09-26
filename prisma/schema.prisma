@@ -1,0 +1,95 @@
+﻿// Schema do banco de dados - multi-tenant
+// Cada Establishment é um salão/barbearia/clínica independente.
+// Toda tabela de negócio carrega establishmentId para isolar os dados entre clientes.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum QueueStatus {
+  WAITING
+  NOTIFIED
+  CONFIRMED
+  EXPIRED
+  CANCELLED
+}
+
+enum StaffRole {
+  OWNER
+  STAFF
+}
+
+model Establishment {
+  id                String   @id @default(cuid())
+  name              String
+  whatsappPhoneId   String   @unique
+  whatsappNumber    String
+  timezone          String   @default("America/Sao_Paulo")
+  notifyWindowMins  Int      @default(15)
+  createdAt         DateTime @default(now())
+
+  staff        Staff[]
+  queueEntries QueueEntry[]
+  slots        Slot[]
+  services     Service[]
+}
+
+model Staff {
+  id              String        @id @default(cuid())
+  establishmentId String
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  email           String
+  passwordHash    String
+  role            StaffRole     @default(STAFF)
+  createdAt       DateTime      @default(now())
+
+  @@unique([establishmentId, email])
+}
+
+model Service {
+  id              String        @id @default(cuid())
+  establishmentId String
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  name            String
+  durationMins    Int           @default(30)
+
+  queueEntries QueueEntry[]
+}
+
+model QueueEntry {
+  id              String        @id @default(cuid())
+  establishmentId String
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  serviceId       String?
+  service         Service?      @relation(fields: [serviceId], references: [id])
+
+  customerPhone   String
+  customerName    String?
+  status          QueueStatus @default(WAITING)
+
+  notifiedAt      DateTime?
+  notifyExpiresAt DateTime?
+  respondedAt     DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([establishmentId, status])
+}
+
+model Slot {
+  id              String        @id @default(cuid())
+  establishmentId String
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  startsAt        DateTime
+  endsAt          DateTime
+  claimedByEntry  String?
+  createdAt       DateTime      @default(now())
+
+  @@index([establishmentId, startsAt])
+}
