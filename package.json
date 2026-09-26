@@ -25,7 +25,16 @@
     "@types/bcryptjs": "2.4.6",
     "@types/node": "20.14.15",
     "@types/react": "18.3.3",
+<<<<<<< HEAD
     "prisma": "5.17.0",
     "typescript": "5.5.4"
+=======
+    "@types/bcryptjs": "2.4.6"
+  },
+  "allowScripts": {
+    "@prisma/client@5.17.0": true,
+    "prisma@5.17.0": true,
+    "@prisma/engines@5.17.0": true
+>>>>>>> 9f7df391ca4c1c93f6ecc381980c2beb5aab281e
   }
 }

@@ -1,9 +1,8 @@
-// app/layout.tsx
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Fila de Atendimento",
-  description: "Sistema de fila de atendimento via WhatsApp",
+  title: "Lista de Espera Inteligente",
+  description: "Gerencie a fila de espera do seu estabelecimento",
 };
 
 export default function RootLayout({
