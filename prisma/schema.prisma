@@ -1,4 +1,4 @@
-﻿// Schema do banco de dados - multi-tenant
+// Schema do banco de dados - multi-tenant
 // Cada Establishment é um salão/barbearia/clínica independente.
 // Toda tabela de negócio carrega establishmentId para isolar os dados entre clientes.
 

@@ -1,0 +1,63 @@
+// app/api/whatsapp/webhook/route.ts
+//
+// POST: recebido toda vez que um cliente manda mensagem no WhatsApp.
+// A verificação GET (usada só na configuração do webhook no Meta Developers)
+// fica a cargo do seu amigo, no mesmo arquivo.
+//
+// IMPORTANTE: para validar a assinatura (X-Hub-Signature-256) precisamos do
+// corpo BRUTO da requisição, então lemos com `request.text()` antes de
+// fazer JSON.parse — nunca use request.json() diretamente aqui.
+
+import { NextRequest, NextResponse } from "next/server";
+import { verifyWebhookSignature, parseIncomingMessages } from "@/lib/whatsapp";
+import { enterQueue } from "@/lib/queue";
+import { prisma } from "@/lib/prisma";
+
+export async function POST(request: NextRequest) {
+  const rawBody = await request.text();
+  const signature = request.headers.get("x-hub-signature-256");
+
+  if (!verifyWebhookSignature(rawBody, signature)) {
+    console.warn("Webhook WhatsApp: assinatura inválida, requisição ignorada.");
+    return NextResponse.json({ error: "assinatura inválida" }, { status: 401 });
+  }
+
+  let payload: any;
+  try {
+    payload = JSON.parse(rawBody);
+  } catch {
+    return NextResponse.json({ error: "payload inválido" }, { status: 400 });
+  }
+
+  const messages = parseIncomingMessages(payload);
+
+  for (const message of messages) {
+    try {
+      // Cada número da Meta pertence a UM estabelecimento (whatsappPhoneId é @unique).
+      const establishment = await prisma.establishment.findUnique({
+        where: { whatsappPhoneId: message.phoneNumberId },
+      });
+
+      if (!establishment) {
+        console.warn(`Webhook WhatsApp: nenhum estabelecimento para phone_number_id ${message.phoneNumberId}`);
+        continue;
+      }
+
+      // Regra inicial simples: qualquer mensagem de texto entra na fila.
+      // Ajuste esse gatilho depois (ex: só entra se mandar "oi"/"entrar",
+      // ou perguntar antes qual serviço o cliente quer).
+      await enterQueue({
+        establishmentId: establishment.id,
+        customerPhone: message.from,
+        customerName: message.name,
+      });
+    } catch (err) {
+      console.error("Erro ao processar mensagem do WhatsApp:", err);
+      // Não interrompe o loop nem retorna erro pra Meta — ela reenviaria a
+      // mesma mensagem várias vezes. Só logamos e seguimos.
+    }
+  }
+
+  // A Meta exige resposta 200 rápida; se demorar demais ela reenvia o evento.
+  return NextResponse.json({ ok: true });
+}
