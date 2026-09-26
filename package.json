@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "lista-espera-inteligente",
   "version": "0.1.0",
   "private": true,
@@ -26,5 +26,10 @@
     "@types/node": "20.14.15",
     "@types/react": "18.3.3",
     "@types/bcryptjs": "2.4.6"
+  },
+  "allowScripts": {
+    "@prisma/client@5.17.0": true,
+    "prisma@5.17.0": true,
+    "@prisma/engines@5.17.0": true
   }
 }
