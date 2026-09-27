@@ -7,10 +7,6 @@
 // Pré-requisito (Parte B / config Supabase): habilitar Realtime na tabela
 // QueueEntry em Database > Replication no painel do Supabase — sem isso,
 // o canal se inscreve mas nunca recebe eventos.
-//
-// NOTA TEMPORÁRIA DE DEBUG: adicionados console.log no status da inscrição
-// e em cada evento recebido, só para diagnosticar se o Realtime está
-// funcionando. Remover depois de confirmado.
 
 "use client";
 
@@ -65,21 +61,16 @@ export default function ListaFila({
           event: "*", // INSERT, UPDATE e DELETE
           schema: "public",
           table: "QueueEntry",
-          // filter: `establishmentId=eq.${establishmentId}`,
+          filter: `establishmentId=eq.${establishmentId}`,
         },
-        (payload) => {
-          // DEBUG: confirma se algum evento do Realtime chegou de fato.
-          console.log("[Realtime] Evento recebido:", payload);
+        () => {
           // Não confiamos no payload do evento pra montar a linha (não traz
           // service.name nem a posição calculada) — só usamos como gatilho
           // pra buscar o estado atualizado da API.
           refetch();
         }
       )
-      .subscribe((status) => {
-        // DEBUG: confirma se o canal conseguiu se inscrever (deve virar "SUBSCRIBED").
-        console.log("[Realtime] Status da inscrição:", status);
-      });
+      .subscribe();
 
     return () => {
       supabaseBrowserClient.removeChannel(channel);
