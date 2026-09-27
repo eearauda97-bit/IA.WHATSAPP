@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { findNextCompatibleEntry, markEntryAsNotified } from "@/lib/queue";
-import { sendWhatsAppMessage } from "@/lib/whatsapp";
+import { notifyNext } from "@/lib/queue";
 
 const slotSchema = z.object({
   establishmentId: z.string().min(1),
@@ -62,47 +61,31 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  const nextEntry = await findNextCompatibleEntry(establishmentId, startDate, endDate);
+  try {
+    const notifiedEntry = await notifyNext(establishmentId);
 
-  if (!nextEntry) {
+    if (!notifiedEntry) {
+      return NextResponse.json(
+        {
+          message: "Horário registrado, mas ninguém compatível na fila no momento (ou já há alguém aguardando confirmação).",
+          slot,
+        },
+        { status: 200 }
+      );
+    }
+
     return NextResponse.json(
       {
-        message: "Horário registrado, mas ninguém compatível na fila no momento.",
+        message: "Cliente notificado com sucesso.",
         slot,
+        notifiedEntry,
       },
       { status: 200 }
     );
-  }
-
-  try {
-    await sendWhatsAppMessage(
-      nextEntry.customerPhone,
-      `Abriu um horário às ${startDate.toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}. Você quer pegar? Responda SIM para confirmar.`
-    );
   } catch (err) {
-    // Rollback: não deixa o cliente marcado como "notificado" se a mensagem falhou.
-    await prisma.queueEntry.update({
-      where: { id: nextEntry.id },
-      data: { status: "WAITING", notifiedAt: null, notifyExpiresAt: null },
-    });
-
     return NextResponse.json(
-      { error: "Falha ao enviar notificação via WhatsApp.", slot },
+      { error: "Falha ao processar a notificação.", slot },
       { status: 502 }
     );
   }
-
-  await markEntryAsNotified(nextEntry.id, establishment.notifyWindowMins);
-
-  return NextResponse.json(
-    {
-      message: "Cliente notificado com sucesso.",
-      slot,
-      notifiedEntry: nextEntry,
-    },
-    { status: 200 }
-  );
 }
