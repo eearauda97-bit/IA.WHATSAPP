@@ -42,11 +42,18 @@ export async function enterQueue(params: EnterQueueParams): Promise<QueueEntry> 
 
   if (existing) {
     const position = await getPosition(existing);
-    await sendWhatsAppMessage(
-      establishment.whatsappPhoneId,
-      customerPhone,
-      `Você já está na fila! Sua posição atual é ${position}.`
-    );
+    try {
+      await sendWhatsAppMessage(
+        establishment.whatsappPhoneId,
+        customerPhone,
+        `Você já está na fila! Sua posição atual é ${position}.`
+      );
+    } catch (err) {
+      // A entrada na fila já existe e já foi encontrada — não deixamos uma
+      // falha de envio (token expirado, rede, restrição da Meta) impedir
+      // o retorno normal da função.
+      console.error(`Falha ao enviar mensagem de "já está na fila" para ${customerPhone}:`, err);
+    }
     return existing;
   }
 
@@ -61,11 +68,18 @@ export async function enterQueue(params: EnterQueueParams): Promise<QueueEntry> 
   });
 
   const position = await getPosition(entry);
-  await sendWhatsAppMessage(
-    establishment.whatsappPhoneId,
-    customerPhone,
-    `Você entrou na fila! Sua posição é ${position}. Avisaremos por aqui quando chegar sua vez.`
-  );
+  try {
+    await sendWhatsAppMessage(
+      establishment.whatsappPhoneId,
+      customerPhone,
+      `Você entrou na fila! Sua posição é ${position}. Avisaremos por aqui quando chegar sua vez.`
+    );
+  } catch (err) {
+    // O registro já foi criado no banco — uma falha só no envio da
+    // confirmação não deve derrubar o fluxo de quem chamou enterQueue
+    // (ex: o webhook, que processa várias mensagens em sequência).
+    console.error(`Falha ao enviar mensagem de confirmação de entrada para ${customerPhone}:`, err);
+  }
 
   return entry;
 }
@@ -117,11 +131,19 @@ export async function notifyNext(establishmentId: string): Promise<QueueEntry | 
     data: { status: "NOTIFIED", notifiedAt, notifyExpiresAt },
   });
 
-  await sendWhatsAppMessage(
-    establishment.whatsappPhoneId,
-    updated.customerPhone,
-    `Chegou sua vez! Você tem ${establishment.notifyWindowMins} minutos para confirmar, ou perderá a vez.`
-  );
+  try {
+    await sendWhatsAppMessage(
+      establishment.whatsappPhoneId,
+      updated.customerPhone,
+      `Chegou sua vez! Você tem ${establishment.notifyWindowMins} minutos para confirmar, ou perderá a vez.`
+    );
+  } catch (err) {
+    // O status já mudou pra NOTIFIED no banco antes disso — mesmo que o
+    // envio da mensagem falhe (token expirado, rede, restrição da Meta),
+    // não queremos que isso derrube quem chamou notifyNext (ex: um loop
+    // de expireStaleNotifications processando vários clientes).
+    console.error(`Falha ao enviar notificação WhatsApp para ${updated.customerPhone}:`, err);
+  }
 
   return updated;
 }
