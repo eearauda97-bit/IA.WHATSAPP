@@ -10,7 +10,7 @@
 
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { supabaseBrowserClient } from "@/lib/supabase-client";
 
 type QueueEntryWithExtras = {
@@ -33,12 +33,33 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_STYLE: Record<string, string> = {
-  WAITING: "bg-quietSoft text-quiet",
-  NOTIFIED: "bg-amberSoft text-amber",
-  CONFIRMED: "bg-accentSoft text-accent",
+  WAITING: "bg-surfaceMuted text-inkSecondary",
+  NOTIFIED: "bg-warningSoft text-warning",
+  CONFIRMED: "bg-successSoft text-success",
   EXPIRED: "bg-dangerSoft text-danger",
-  CANCELLED: "bg-quietSoft text-quiet",
+  CANCELLED: "bg-surfaceMuted text-inkMuted",
 };
+
+function initialsFrom(name: string | null, phone: string) {
+  if (name && name.trim().length > 0) {
+    const parts = name.trim().split(/\s+/);
+    return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase();
+  }
+  return phone.slice(-2);
+}
+
+function StatusBadge({ status }: { status: string }) {
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+        STATUS_STYLE[status] ?? "bg-surfaceMuted text-inkMuted"
+      }`}
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+      {STATUS_LABEL[status] ?? status}
+    </span>
+  );
+}
 
 export default function ListaFila({
   initialEntries,
@@ -66,15 +87,12 @@ export default function ListaFila({
       .on(
         "postgres_changes",
         {
-          event: "*", // INSERT, UPDATE e DELETE
+          event: "*",
           schema: "public",
           table: "QueueEntry",
           filter: `establishmentId=eq.${establishmentId}`,
         },
         () => {
-          // Não confiamos no payload do evento pra montar a linha (não traz
-          // service.name nem a posição calculada) — só usamos como gatilho
-          // pra buscar o estado atualizado da API.
           refetch();
         }
       )
@@ -85,35 +103,76 @@ export default function ListaFila({
     };
   }, [establishmentId, refetch]);
 
-  if (entries.length === 0) {
-    return (
-      <div className="rounded-2xl border border-border bg-surface px-6 py-10 text-center text-muted">
-        Nenhum cliente na fila no momento.
-      </div>
-    );
-  }
+  const stats = useMemo(() => {
+    return {
+      waiting: entries.filter((e) => e.status === "WAITING").length,
+      notified: entries.filter((e) => e.status === "NOTIFIED").length,
+      confirmed: entries.filter((e) => e.status === "CONFIRMED").length,
+    };
+  }, [entries]);
 
   return (
-    <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface">
-      {entries.map((entry) => (
-        <li key={entry.id} className="flex items-center justify-between gap-4 p-5">
-          <div className="min-w-0">
-            <p className="truncate font-medium text-ink">
-              {entry.status === "WAITING" ? `${entry.position}º — ` : ""}
-              {entry.customerName || entry.customerPhone}
-            </p>
-            <p className="mt-0.5 truncate text-sm text-muted">
-              {entry.service?.name ?? "Serviço não informado"} · {entry.customerPhone}
-            </p>
-          </div>
+    <div>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-ink">Fila de atendimento</h1>
+      </div>
 
-          <span
-            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${STATUS_STYLE[entry.status] ?? "bg-quietSoft text-quiet"}`}
-          >
-            {STATUS_LABEL[entry.status] ?? entry.status}
-          </span>
-        </li>
-      ))}
-    </ul>
+      <div className="mb-6 grid grid-cols-3 gap-4">
+        <div className="rounded-xl border border-border bg-surface p-4">
+          <p className="text-2xl font-semibold text-ink">{stats.waiting}</p>
+          <p className="mt-0.5 text-xs text-inkMuted">Aguardando</p>
+        </div>
+        <div className="rounded-xl border border-border bg-surface p-4">
+          <p className="text-2xl font-semibold text-ink">{stats.notified}</p>
+          <p className="mt-0.5 text-xs text-inkMuted">Chamados</p>
+        </div>
+        <div className="rounded-xl border border-border bg-surface p-4">
+          <p className="text-2xl font-semibold text-ink">{stats.confirmed}</p>
+          <p className="mt-0.5 text-xs text-inkMuted">Confirmados</p>
+        </div>
+      </div>
+
+      {entries.length === 0 ? (
+        <div className="rounded-xl border border-border bg-surface px-6 py-12 text-center">
+          <p className="text-sm font-medium text-ink">Nenhum cliente na fila</p>
+          <p className="mt-1 text-sm text-inkMuted">
+            Assim que alguém entrar pelo WhatsApp, essa lista é atualizada automaticamente.
+          </p>
+        </div>
+      ) : (
+        <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
+          {entries.map((entry) => (
+            <li key={entry.id} className="flex items-center gap-4 px-5 py-4">
+              <div className="flex w-6 shrink-0 justify-center">
+                {entry.status === "WAITING" && (
+                  <span className="text-sm font-semibold text-inkMuted">
+                    {entry.position}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accentSoft text-xs font-semibold text-accent">
+                {initialsFrom(entry.customerName, entry.customerPhone)}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-ink">
+                  {entry.customerName || entry.customerPhone}
+                </p>
+                <p className="truncate text-xs text-inkMuted">
+                  {entry.service?.name ?? "Serviço não informado"}
+                </p>
+              </div>
+
+              <p className="hidden shrink-0 text-xs text-inkMuted sm:block">
+                {entry.customerPhone}
+              </p>
+
+              <StatusBadge status={entry.status} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

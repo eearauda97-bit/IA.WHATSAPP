@@ -1,17 +1,11 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
+import { Inter } from "next/font/google";
 import InteractiveBackground from "@/components/InteractiveBackground";
 
-const fraunces = Fraunces({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-display",
-  weight: ["400", "500", "600"],
-});
-
-const jakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  variable: "--font-body",
+  variable: "--font-sans",
   weight: ["400", "500", "600", "700"],
 });
 
@@ -26,8 +20,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pt-BR" className={`${fraunces.variable} ${jakarta.variable}`}>
-      <body className="min-h-screen font-body text-ink antialiased">
+    <html lang="pt-BR" className={inter.variable}>
+      <body className="min-h-screen bg-bg font-sans text-ink antialiased">
         <InteractiveBackground />
         {children}
       </body>
