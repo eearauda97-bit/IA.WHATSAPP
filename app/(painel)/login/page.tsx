@@ -48,45 +48,31 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="login-container" style={{ maxWidth: 360, margin: "4rem auto", fontFamily: "sans-serif" }}>
-      <h1>Entrar</h1>
-      <form className="login-form" onSubmit={handleSubmit}>
-        <div style={{ marginBottom: "1rem" }}>
-          <label htmlFor="email">E-mail</label>
-          <br />
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={loading}
-            style={{ width: "100%", padding: "0.5rem" }}
-          />
-        </div>
+    <main className="relative flex min-h-screen flex-col items-center justify-center px-6">
+      <div className="w-full max-w-sm rounded-2xl border border-border bg-surface/90 p-8 shadow-sm backdrop-blur-sm">
+        <h1 className="font-display text-2xl font-medium text-ink">Entrar</h1>
+        <p className="mt-1 text-sm text-muted">Acesse o painel do seu estabelecimento.</p>
 
-        <div style={{ marginBottom: "1rem" }}>
-          <label htmlFor="password">Senha</label>
-          <br />
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={loading}
-            style={{ width: "100%", padding: "0.5rem" }}
-          />
-        </div>
+        <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+          <div>
+            <label htmlFor="email" className="mb-1 block text-sm font-medium text-ink">E-mail</label>
+            <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={loading} className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accentSoft disabled:opacity-60" />
+          </div>
 
-        {error && (
-          <p className="login-error" style={{ color: "red", marginBottom: "1rem" }}>
-            {error}
-          </p>
-        )}
+          <div>
+            <label htmlFor="password" className="mb-1 block text-sm font-medium text-ink">Senha</label>
+            <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} disabled={loading} className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accentSoft disabled:opacity-60" />
+          </div>
 
-        <button type="submit" disabled={loading} style={{ width: "100%", padding: "0.6rem" }}>
-          {loading ? "Entrando..." : "Entrar"}
-        </button>
-      </form>
-    </div>
+          {error && (
+            <p className="rounded-lg bg-dangerSoft px-3 py-2 text-sm text-danger">{error}</p>
+          )}
+
+          <button type="submit" disabled={loading} className="w-full rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
+            {loading ? "Entrando..." : "Entrar"}
+          </button>
+        </form>
+      </div>
+    </main>
   );
 }
