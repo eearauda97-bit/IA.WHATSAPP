@@ -33,6 +33,12 @@ declare module "next-auth" {
   }
 }
 
+// Import de tipo "vazio" necessário antes do augmentation abaixo: o
+// TypeScript, em alguns casos, não reconhece corretamente o subcaminho
+// "next-auth/jwt" (que vem do campo "exports" do pacote) dentro de um
+// `declare module` sem essa referência explícita antes.
+import type {} from "next-auth/jwt";
+
 declare module "next-auth/jwt" {
   interface JWT {
     staffId?: string;
