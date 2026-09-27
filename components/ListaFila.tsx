@@ -32,6 +32,14 @@ const STATUS_LABEL: Record<string, string> = {
   CANCELLED: "Cancelado",
 };
 
+const STATUS_STYLE: Record<string, string> = {
+  WAITING: "bg-quietSoft text-quiet",
+  NOTIFIED: "bg-amberSoft text-amber",
+  CONFIRMED: "bg-accentSoft text-accent",
+  EXPIRED: "bg-dangerSoft text-danger",
+  CANCELLED: "bg-quietSoft text-quiet",
+};
+
 export default function ListaFila({
   initialEntries,
   establishmentId,
@@ -78,31 +86,32 @@ export default function ListaFila({
   }, [establishmentId, refetch]);
 
   if (entries.length === 0) {
-    return <p className="text-gray-500">Nenhum cliente na fila no momento.</p>;
+    return (
+      <div className="rounded-2xl border border-border bg-surface px-6 py-10 text-center text-muted">
+        Nenhum cliente na fila no momento.
+      </div>
+    );
   }
 
   return (
-    <ul className="divide-y divide-gray-200 rounded-lg border">
+    <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface">
       {entries.map((entry) => (
-        <li key={entry.id} className="flex items-center justify-between p-4">
-          <div>
-            <p className="font-medium">
+        <li key={entry.id} className="flex items-center justify-between gap-4 p-5">
+          <div className="min-w-0">
+            <p className="truncate font-medium text-ink">
               {entry.status === "WAITING" ? `${entry.position}º — ` : ""}
               {entry.customerName || entry.customerPhone}
             </p>
-            <p className="text-sm text-gray-500">
+            <p className="mt-0.5 truncate text-sm text-muted">
               {entry.service?.name ?? "Serviço não informado"} · {entry.customerPhone}
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium">
-              {STATUS_LABEL[entry.status] ?? entry.status}
-            </span>
-            {/* Botão de cancelamento é Parte B (BotaoMarcarCancelamento.tsx).
-                Quando estiver pronto, importar e usar aqui, ex:
-                <BotaoMarcarCancelamento entryId={entry.id} /> */}
-          </div>
+          <span
+            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${STATUS_STYLE[entry.status] ?? "bg-quietSoft text-quiet"}`}
+          >
+            {STATUS_LABEL[entry.status] ?? entry.status}
+          </span>
         </li>
       ))}
     </ul>

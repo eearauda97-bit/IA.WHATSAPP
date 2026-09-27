@@ -30,11 +30,16 @@ export default async function DashboardPage() {
     }))
   );
 
-    return (
-    <main className="mx-auto max-w-2xl p-6">
-      <h1 className="mb-4 text-2xl font-semibold">Fila de atendimento</h1>
+  return (
+    <main className="relative mx-auto max-w-2xl px-6 py-16">
+      <header className="mb-10">
+        <p className="text-sm text-muted">Painel do estabelecimento</p>
+        <h1 className="mt-1 font-display text-3xl font-medium text-ink">
+          Fila de atendimento
+        </h1>
+      </header>
 
-      <div className="mb-4">
+      <div className="mb-8">
         <BotaoMarcarCancelamento
           establishmentId={session.user.establishmentId}
           startsAt={new Date(Date.now() + 30 * 60 * 1000).toISOString()}
