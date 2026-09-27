@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --mx: 50%;
+  --my: 50%;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer utilities {
+  .animate-blob-a {
+    animation: blobA 22s ease-in-out infinite;
+  }
+  .animate-blob-b {
+    animation: blobB 26s ease-in-out infinite;
+  }
+}
+
+@keyframes blobA {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(4%, -6%) scale(1.08); }
+  66% { transform: translate(-3%, 4%) scale(0.95); }
+}
+
+@keyframes blobB {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-5%, 5%) scale(0.92); }
+  66% { transform: translate(6%, -3%) scale(1.06); }
+}
