@@ -1,13 +1,4 @@
 // components/ListaFila.tsx
-// Renderiza a fila e se atualiza sozinha via Supabase Realtime: qualquer
-// INSERT/UPDATE/DELETE em QueueEntry do estabelecimento dispara um refetch
-// de /api/queue (mantém posição e dados do serviço sempre corretos, em vez
-// de tentar reconstruir isso a partir do payload cru do Realtime).
-//
-// Pré-requisito (Parte B / config Supabase): habilitar Realtime na tabela
-// QueueEntry em Database > Replication no painel do Supabase — sem isso,
-// o canal se inscreve mas nunca recebe eventos.
-
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
@@ -40,6 +31,9 @@ const STATUS_STYLE: Record<string, string> = {
   CANCELLED: "bg-surfaceMuted text-inkMuted",
 };
 
+// Chave usada no filtro <-> status real da entrada
+type FiltroStatus = "WAITING" | "NOTIFIED" | "CONFIRMED" | null;
+
 function initialsFrom(name: string | null, phone: string) {
   if (name && name.trim().length > 0) {
     const parts = name.trim().split(/\s+/);
@@ -69,6 +63,7 @@ export default function ListaFila({
   establishmentId: string;
 }) {
   const [entries, setEntries] = useState(initialEntries);
+  const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>(null);
 
   const refetch = useCallback(async () => {
     try {
@@ -111,37 +106,88 @@ export default function ListaFila({
     };
   }, [entries]);
 
+  // Se houver filtro ativo, mostra só quem tem aquele status.
+  // Clicar de novo no mesmo card (ou no botão "Ver todos") volta a mostrar tudo.
+  const entriesFiltradas = useMemo(() => {
+    if (!filtroStatus) return entries;
+    return entries.filter((e) => e.status === filtroStatus);
+  }, [entries, filtroStatus]);
+
+  function toggleFiltro(status: FiltroStatus) {
+    setFiltroStatus((atual) => (atual === status ? null : status));
+  }
+
+  const cardBase =
+    "rounded-xl border p-4 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+  const cardInativo = "border-border bg-surface hover:bg-surfaceMuted";
+  const cardAtivo = "border-accent bg-accentSoft";
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-xl font-semibold text-ink">Fila de atendimento</h1>
+        {filtroStatus && (
+          <button
+            type="button"
+            onClick={() => setFiltroStatus(null)}
+            className="text-sm font-medium text-accent hover:underline"
+          >
+            ← Ver todos
+          </button>
+        )}
       </div>
 
       <div className="mb-6 grid grid-cols-3 gap-4">
-        <div className="rounded-xl border border-border bg-surface p-4">
+        <button
+          type="button"
+          onClick={() => toggleFiltro("WAITING")}
+          className={`${cardBase} ${
+            filtroStatus === "WAITING" ? cardAtivo : cardInativo
+          }`}
+        >
           <p className="text-2xl font-semibold text-ink">{stats.waiting}</p>
           <p className="mt-0.5 text-xs text-inkMuted">Aguardando</p>
-        </div>
-        <div className="rounded-xl border border-border bg-surface p-4">
+        </button>
+
+        <button
+          type="button"
+          onClick={() => toggleFiltro("NOTIFIED")}
+          className={`${cardBase} ${
+            filtroStatus === "NOTIFIED" ? cardAtivo : cardInativo
+          }`}
+        >
           <p className="text-2xl font-semibold text-ink">{stats.notified}</p>
           <p className="mt-0.5 text-xs text-inkMuted">Chamados</p>
-        </div>
-        <div className="rounded-xl border border-border bg-surface p-4">
+        </button>
+
+        <button
+          type="button"
+          onClick={() => toggleFiltro("CONFIRMED")}
+          className={`${cardBase} ${
+            filtroStatus === "CONFIRMED" ? cardAtivo : cardInativo
+          }`}
+        >
           <p className="text-2xl font-semibold text-ink">{stats.confirmed}</p>
           <p className="mt-0.5 text-xs text-inkMuted">Confirmados</p>
-        </div>
+        </button>
       </div>
 
-      {entries.length === 0 ? (
+      {entriesFiltradas.length === 0 ? (
         <div className="rounded-xl border border-border bg-surface px-6 py-12 text-center">
-          <p className="text-sm font-medium text-ink">Nenhum cliente na fila</p>
+          <p className="text-sm font-medium text-ink">
+            {filtroStatus
+              ? `Nenhum cliente com status "${STATUS_LABEL[filtroStatus]}"`
+              : "Nenhum cliente na fila"}
+          </p>
           <p className="mt-1 text-sm text-inkMuted">
-            Assim que alguém entrar pelo WhatsApp, essa lista é atualizada automaticamente.
+            {filtroStatus
+              ? "Assim que houver alguém nesse status, a lista atualiza automaticamente."
+              : "Assim que alguém entrar pelo WhatsApp, essa lista é atualizada automaticamente."}
           </p>
         </div>
       ) : (
         <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
-          {entries.map((entry) => (
+          {entriesFiltradas.map((entry) => (
             <li key={entry.id} className="flex items-center gap-4 px-5 py-4">
               <div className="flex w-6 shrink-0 justify-center">
                 {entry.status === "WAITING" && (
