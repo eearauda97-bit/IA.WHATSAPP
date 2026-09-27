@@ -1,5 +1,5 @@
+import "./globals.css";
 import type { Metadata } from "next";
-
 export const metadata: Metadata = {
   title: "Lista de Espera Inteligente",
   description: "Gerencie a fila de espera do seu estabelecimento",
