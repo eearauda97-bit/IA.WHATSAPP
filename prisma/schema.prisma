@@ -48,7 +48,20 @@ model Staff {
   role            StaffRole     @default(STAFF)
   createdAt       DateTime      @default(now())
 
+  passwordResetTokens PasswordResetToken[]
+
   @@unique([establishmentId, email])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  staffId   String
+  staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([staffId])
 }
 
 model Service {
