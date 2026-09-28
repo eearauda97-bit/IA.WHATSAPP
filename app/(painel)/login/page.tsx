@@ -50,8 +50,8 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center px-6">
-      <Link href="/" className="absolute left-6 top-6 z-10">
+    <main className="relative flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-accentSoft/40 via-bg to-bg px-6 py-16">
+      <Link href="/" className="absolute left-4 top-4 z-10 sm:left-6 sm:top-6">
         <Image src="/images/esse.png" alt="Logo" width={320} height={320} priority className="h-auto w-36 sm:w-48" />
       </Link>
 
