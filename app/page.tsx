@@ -1,6 +1,10 @@
+import BarbershopBackground from "../components/BarbershopBackground";
+
 export default function HomePage() {
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center px-6">
+    <main className="relative isolate flex min-h-screen flex-col items-center justify-center px-6">
+      <BarbershopBackground />
+
       <div className="w-full max-w-lg rounded-2xl border border-border bg-surface/80 p-10 text-center shadow-sm backdrop-blur-sm">
         <span className="mb-4 inline-block rounded-full bg-accentSoft px-4 py-1 text-xs font-semibold uppercase tracking-wide text-accent">
           Lista de espera inteligente
@@ -15,7 +19,6 @@ export default function HomePage() {
           próximo cliente assim que um horário abrir.
         </p>
 
-        
         <a href="/login" className="mt-8 inline-flex w-full items-center justify-center rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90 sm:w-auto">Entrar no painel</a>
       </div>
     </main>
