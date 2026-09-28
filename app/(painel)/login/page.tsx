@@ -1,5 +1,5 @@
 "use client";
-
+import Image from "next/image";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -51,6 +51,10 @@ export default function LoginPage() {
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center px-6">
+      <Link href="/" className="absolute left-6 top-6 z-10">
+        <Image src="/images/esse.png" alt="Logo" width={320} height={320} priority className="h-auto w-36 sm:w-48" />
+      </Link>
+
       <div className="w-full max-w-sm rounded-2xl border border-border bg-surface/90 p-8 shadow-sm backdrop-blur-sm">
         <h1 className="font-display text-2xl font-medium text-ink">Entrar</h1>
         <p className="mt-1 text-sm text-muted">Acesse o painel do seu estabelecimento.</p>

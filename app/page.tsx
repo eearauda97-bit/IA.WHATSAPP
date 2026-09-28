@@ -1,3 +1,4 @@
+import Image from "next/image";
 import BarbershopBackground from "../components/BarbershopBackground";
 
 export default function HomePage() {
@@ -6,9 +7,14 @@ export default function HomePage() {
       <BarbershopBackground />
 
       <div className="w-full max-w-lg rounded-2xl border border-border bg-surface/80 p-10 text-center shadow-sm backdrop-blur-sm">
-        <span className="mb-4 inline-block rounded-full bg-accentSoft px-4 py-1 text-xs font-semibold uppercase tracking-wide text-accent">
-          Lista de espera inteligente
-        </span>
+        <Image
+  src="/images/semf.png"
+  alt="Logo"
+  width={320}
+  height={320}
+  priority
+  className="mx-auto mb-6 block h-auto w-52 sm:w-64"
+/>
 
         <h1 className="mt-2 font-display text-3xl font-medium text-ink sm:text-4xl">
           Nunca mais perca um horário vago
