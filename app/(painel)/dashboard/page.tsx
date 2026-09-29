@@ -1,5 +1,4 @@
-// app/(painel)/dashboard/page.tsx
-import BotaoMarcarCancelamento from "@/components/BotaoMarcarCancelamento";
+﻿import BotaoMarcarCancelamento from "@/components/BotaoMarcarCancelamento";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -42,7 +41,7 @@ export default async function DashboardPage() {
       />
 
       <main className="mx-auto max-w-4xl px-6 py-10">
-        <div className="mb-6 rounded-xl border border-border bg-surface p-4">
+        <div className="mb-6">
           <BotaoMarcarCancelamento
             establishmentId={session.user.establishmentId}
             startsAt={new Date(Date.now() + 30 * 60 * 1000).toISOString()}
