@@ -3,6 +3,7 @@ import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { rateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 
 const schema = z.object({
   token: z.string().min(20),
@@ -10,6 +11,11 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
+  // Limite por IP: 10 tentativas a cada 15 minutos. Protege contra chute de
+  // token e contra abuso do bcrypt (que é caro de processar).
+  const byIp = await rateLimit(`reset:ip:${getClientIp(req)}`, 10, 15 * 60);
+  if (!byIp.ok) return tooManyRequests(byIp.retryAfterSec);
+
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json(

@@ -3,10 +3,15 @@ import crypto from "crypto";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { sendPasswordResetEmail } from "@/lib/email";
+import { rateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 
 const schema = z.object({ email: z.string().email() });
 
 export async function POST(req: Request) {
+  // Limite por IP: 10 pedidos por hora.
+  const byIp = await rateLimit(`forgot:ip:${getClientIp(req)}`, 10, 60 * 60);
+  if (!byIp.ok) return tooManyRequests(byIp.retryAfterSec);
+
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "E-mail inválido" }, { status: 400 });
@@ -15,7 +20,14 @@ export async function POST(req: Request) {
   try {
     // E-mail não diferencia maiúsculas: buscamos sempre em minúsculas.
     const email = parsed.data.email.trim().toLowerCase();
-    const staff = await prisma.staff.findUnique({ where: { email } });
+
+    // Limite por e-mail: 3 e-mails por hora. Acima disso a resposta é a mesma
+    // de sempre (ok), só que nenhum e-mail é enviado. Assim ninguém consegue
+    // lotar a caixa de outra pessoa nem descobrir quais e-mails existem.
+    const byEmail = await rateLimit(`forgot:email:${email}`, 3, 60 * 60);
+    const staff = byEmail.ok
+      ? await prisma.staff.findUnique({ where: { email } })
+      : null;
 
     if (staff) {
       const token = crypto.randomBytes(32).toString("hex");

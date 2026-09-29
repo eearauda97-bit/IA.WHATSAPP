@@ -104,3 +104,8 @@ model Slot {
 
   @@index([establishmentId, startsAt])
 }
+model RateLimit {
+  key     String   @id
+  count   Int
+  resetAt DateTime
+}
