@@ -13,9 +13,9 @@ export async function POST(req: Request) {
   }
 
   try {
-    const staff = await prisma.staff.findFirst({
-      where: { email: { equals: parsed.data.email.trim(), mode: "insensitive" } },
-    });
+    // E-mail não diferencia maiúsculas: buscamos sempre em minúsculas.
+    const email = parsed.data.email.trim().toLowerCase();
+    const staff = await prisma.staff.findUnique({ where: { email } });
 
     if (staff) {
       const token = crypto.randomBytes(32).toString("hex");

@@ -20,7 +20,7 @@ async function main() {
 
   const passwordHash = await bcrypt.hash("senha123", 10);
   const staff = await prisma.staff.upsert({
-    where: { establishmentId_email: { establishmentId: establishment.id, email: "teste@teste.com" } },
+    where: { email: "teste@teste.com" },
     update: {},
     create: {
       establishmentId: establishment.id,

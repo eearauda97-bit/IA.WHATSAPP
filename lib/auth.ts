@@ -59,11 +59,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Senha", type: "password" },
       },
       authorize: async (credentials) => {
-        const email = credentials?.email as string | undefined;
+        const rawEmail = credentials?.email as string | undefined;
         const password = credentials?.password as string | undefined;
-        if (!email || !password) return null;
+        if (!rawEmail || !password) return null;
 
-        const staff = await prisma.staff.findFirst({ where: { email } });
+        // E-mail não diferencia maiúsculas: guardamos e buscamos sempre em minúsculas.
+        const email = rawEmail.trim().toLowerCase();
+        const staff = await prisma.staff.findUnique({ where: { email } });
         if (!staff) return null;
 
         const validPassword = await bcrypt.compare(password, staff.passwordHash);

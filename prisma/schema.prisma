@@ -43,14 +43,12 @@ model Staff {
   id              String        @id @default(cuid())
   establishmentId String
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  email           String
+  email           String        @unique
   passwordHash    String
   role            StaffRole     @default(STAFF)
   createdAt       DateTime      @default(now())
 
   passwordResetTokens PasswordResetToken[]
-
-  @@unique([establishmentId, email])
 }
 
 model PasswordResetToken {
