@@ -14,17 +14,22 @@ export default function TopBar({
   role: string;
 }) {
   return (
-    <header className="border-b border-border bg-surface">
+    <header className="bg-[#0E7490] shadow-sm">
       <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
         <div>
-          <p className="text-sm font-semibold text-ink">{establishmentName}</p>
-          <p className="text-xs text-inkMuted">Painel de atendimento</p>
+          <p className="text-sm font-semibold text-white">{establishmentName}</p>
+          <p className="text-xs font-medium text-[#ECFEFF]">
+            Painel de atendimento
+          </p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="rounded-full bg-surfaceMuted px-2.5 py-1 text-xs font-medium text-inkSecondary">
+          <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-[#0B4A5C]">
             {ROLE_LABEL[role] ?? role}
           </span>
-          <SignOutButton />
+          {/* Força o botão Sair a ficar sólido e legível sobre a barra */}
+          <div className="[&_button]:!border-transparent [&_button]:!bg-white [&_button]:!font-medium [&_button]:!text-[#0B4A5C] [&_button:hover]:!bg-[#ECFEFF]">
+            <SignOutButton />
+          </div>
         </div>
       </div>
     </header>
