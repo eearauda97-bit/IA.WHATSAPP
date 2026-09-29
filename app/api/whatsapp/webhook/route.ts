@@ -54,15 +54,34 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "assinatura inválida" }, { status: 401 });
   }
 
-  let payload: any;
+    let payload: any;
   try {
     payload = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ error: "payload inválido" }, { status: 400 });
   }
 
-  const messages = parseIncomingMessages(payload);
+  // Log dos status de entrega que a Meta manda de volta (sent/delivered/failed)
+  try {
+    for (const entry of payload?.entry ?? []) {
+      for (const change of entry?.changes ?? []) {
+        for (const status of change?.value?.statuses ?? []) {
+          if (status.status === "failed" || status.errors) {
+            console.error(
+              "WhatsApp ENTREGA FALHOU:",
+              JSON.stringify({ para: status.recipient_id, errors: status.errors })
+            );
+          } else {
+            console.log(`WhatsApp status: ${status.status} para ${status.recipient_id}`);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Erro ao ler statuses do WhatsApp:", err);
+  }
 
+  const messages = parseIncomingMessages(payload);
   for (const message of messages) {
     try {
       // Cada número da Meta pertence a UM estabelecimento (whatsappPhoneId é @unique).
