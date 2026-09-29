@@ -1,5 +1,4 @@
 const { PrismaClient } = require('@prisma/client');
-
 const prisma = new PrismaClient();
 
 async function main() {
@@ -12,16 +11,20 @@ async function main() {
     process.exit(1);
   }
 
-  const entry = await prisma.queueEntry.create({
-    data: {
+  // Remove todas as entradas da fila desse estabelecimento, EXCETO a do Eduardo (telefone real).
+  const result = await prisma.queueEntry.deleteMany({
+    where: {
       establishmentId: establishment.id,
-      customerPhone: '56994052585',
-      customerName: 'Eduardo (teste real)',
-      status: 'WAITING',
+      customerPhone: { not: '5562998341670' },
     },
   });
 
-  console.log('Cliente adicionado na fila:', entry);
+  console.log(`${result.count} entrada(s) de teste removida(s).`);
+
+  const remaining = await prisma.queueEntry.findMany({
+    where: { establishmentId: establishment.id },
+  });
+  console.log('Fila restante:', remaining);
 }
 
 main()

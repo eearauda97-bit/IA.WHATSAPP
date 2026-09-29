@@ -1,6 +1,7 @@
 // lib/queue.ts
 // Responsabilidades deste arquivo (Parte A): entrar na fila, notificar o
-// próximo cliente e expirar notificações não confirmadas.
+// próximo cliente, confirmar/expirar notificações e reconhecer respostas
+// de confirmação vindas do WhatsApp.
 //
 // A lógica de "achar o próximo cliente compatível" é Parte B — este arquivo
 // só CONSOME findNextCompatibleEntry de ./queue-matching.ts, sem implementar
@@ -175,4 +176,94 @@ export async function expireStaleNotifications(establishmentId?: string): Promis
   }
 
   return stale.length;
+}
+
+// ---------------------------------------------------------------------
+// Confirmação de horário via resposta no WhatsApp
+// ---------------------------------------------------------------------
+
+const CONFIRMATION_WORDS = new Set([
+  "sim", "s", "ss", "confirmo", "confirma", "confirmar",
+  "quero", "aceito", "ok", "okay", "blz", "beleza",
+  "claro", "positivo", "concordo", "yes", "y", "1",
+]);
+
+/**
+ * Normaliza um texto recebido do cliente para comparar com palavras de
+ * confirmação: sem acento, minúsculo, sem espaço/pontuação nas pontas.
+ * Ex: "Sim!!" , " SIM ", "Sim." -> "sim"
+ */
+export function normalizeConfirmationText(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // remove acentos
+    .toLowerCase()
+    .trim()
+    .replace(/[.!?,;:]+$/g, "")
+    .trim();
+}
+
+export function isConfirmationText(text: string): boolean {
+  return CONFIRMATION_WORDS.has(normalizeConfirmationText(text));
+}
+
+/**
+ * Confirma a entrada NOTIFIED de um cliente, identificado pelo telefone,
+ * a partir de uma resposta recebida no WhatsApp. Espelha a mesma regra do
+ * PATCH /api/queue/[id] (action: "confirm"), localizando a entrada pelo
+ * telefone em vez do id, já que é isso que o webhook tem disponível.
+ *
+ * Retorna null se não havia entrada NOTIFIED pendente pra esse telefone
+ * (ex: cliente mandou "sim" sem ter sido chamado, ou já confirmou antes) -
+ * quem chamar deve tratar isso como mensagem comum (cair no enterQueue).
+ */
+export async function confirmNotifiedEntryByPhone(
+  establishmentId: string,
+  customerPhone: string
+): Promise<QueueEntry | null> {
+  const entry = await prisma.queueEntry.findFirst({
+    where: { establishmentId, customerPhone, status: "NOTIFIED" },
+  });
+  if (!entry) return null;
+
+  const establishment = await prisma.establishment.findUniqueOrThrow({
+    where: { id: establishmentId },
+  });
+
+  // Mesma checagem de expiração do PATCH /api/queue/[id]: se o prazo já
+  // passou, expira em vez de confirmar, e libera o próximo da fila.
+  if (entry.notifyExpiresAt && entry.notifyExpiresAt < new Date()) {
+    const expired = await prisma.queueEntry.update({
+      where: { id: entry.id },
+      data: { status: "EXPIRED", respondedAt: new Date() },
+    });
+    try {
+      await sendWhatsAppMessage(
+        establishment.whatsappPhoneId,
+        customerPhone,
+        "O prazo para confirmar esse horário já passou. Assim que abrir outro, avisamos de novo."
+      );
+    } catch (err) {
+      console.error(`Falha ao avisar expiração para ${customerPhone}:`, err);
+    }
+    await notifyNext(establishmentId);
+    return expired;
+  }
+
+  const confirmed = await prisma.queueEntry.update({
+    where: { id: entry.id },
+    data: { status: "CONFIRMED", respondedAt: new Date() },
+  });
+
+  try {
+    await sendWhatsAppMessage(
+      establishment.whatsappPhoneId,
+      customerPhone,
+      "Confirmado! Seu horário está garantido. Até já."
+    );
+  } catch (err) {
+    console.error(`Falha ao enviar confirmação de horário para ${customerPhone}:`, err);
+  }
+
+  return confirmed;
 }

@@ -10,8 +10,28 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { verifyWebhookSignature, parseIncomingMessages } from "@/lib/whatsapp";
-import { enterQueue } from "@/lib/queue";
+import { enterQueue, confirmNotifiedEntryByPhone, isConfirmationText } from "@/lib/queue";
 import { prisma } from "@/lib/prisma";
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+
+  const mode = searchParams.get("hub.mode");
+  const token = searchParams.get("hub.verify_token");
+  const challenge = searchParams.get("hub.challenge");
+
+  const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN;
+
+  if (!verifyToken) {
+    console.error("Webhook WhatsApp: WHATSAPP_VERIFY_TOKEN ausente do ambiente.");
+    return new NextResponse("erro interno de configuração", { status: 500 });
+  }
+
+  if (mode === "subscribe" && token === verifyToken) {
+    return new NextResponse(challenge, { status: 200 });
+  }
+
+  return new NextResponse("token de verificação inválido", { status: 403 });
+}
 
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
@@ -55,7 +75,18 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      // Regra inicial simples: qualquer mensagem de texto entra na fila.
+      // Se o texto parece uma confirmação ("sim", "confirmo", etc.) e existe
+      // uma entrada NOTIFIED esperando resposta desse telefone, trata como
+      // confirmação de horário e NÃO entra na fila de novo. Se não havia
+      // nada pra confirmar (ex: "sim" fora de contexto), cai no fluxo normal.
+      if (isConfirmationText(message.text)) {
+        const confirmResult = await confirmNotifiedEntryByPhone(establishment.id, message.from);
+        if (confirmResult) {
+          continue;
+        }
+      }
+
+      // Regra inicial simples: qualquer outra mensagem de texto entra na fila.
       // Ajuste esse gatilho depois (ex: só entra se mandar "oi"/"entrar",
       // ou perguntar antes qual serviço o cliente quer).
       await enterQueue({
