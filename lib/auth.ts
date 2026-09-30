@@ -9,10 +9,12 @@
 // Variável de ambiente a adicionar no .env.example (Parte B):
 //   AUTH_SECRET=   (gerar com: npx auth secret)
 
+import crypto from "crypto";
 import NextAuth, { type DefaultSession } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import type { StaffRole } from "@prisma/client";
 
 // Estende os tipos padrão do NextAuth pra incluir os campos que a gente
@@ -47,6 +49,16 @@ declare module "next-auth/jwt" {
   }
 }
 
+// Hash de mentira, calculado uma vez. Quando o e-mail não existe, comparamos
+// a senha com ele só para gastar o mesmo tempo de um login real. Sem isso, dá
+// para descobrir quais e-mails existem medindo a demora da resposta.
+const DUMMY_HASH = bcrypt.hashSync("senha-de-mentira-para-igualar-o-tempo", 10);
+
+// Limites de tentativa de login (janela de 15 minutos).
+const LOGIN_WINDOW_SEC = 15 * 60;
+const LOGIN_MAX_POR_EMAIL = 10;
+const LOGIN_MAX_POR_IP = 20;
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   pages: {
@@ -58,18 +70,37 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Senha", type: "password" },
       },
-      authorize: async (credentials) => {
+      authorize: async (credentials, request) => {
         const rawEmail = credentials?.email as string | undefined;
         const password = credentials?.password as string | undefined;
         if (!rawEmail || !password) return null;
 
         // E-mail não diferencia maiúsculas: guardamos e buscamos sempre em minúsculas.
         const email = rawEmail.trim().toLowerCase();
-        const staff = await prisma.staff.findUnique({ where: { email } });
-        if (!staff) return null;
 
-        const validPassword = await bcrypt.compare(password, staff.passwordHash);
-        if (!validPassword) return null;
+        // Limite de tentativas, por IP e por e-mail. Acima do limite o login
+        // simplesmente falha (como se a senha estivesse errada). A chave do
+        // e-mail é um hash, para o e-mail não ficar em texto puro na tabela.
+        const ip = request ? getClientIp(request) : "unknown";
+        const emailKey = crypto.createHash("sha256").update(email).digest("hex").slice(0, 16);
+
+        const porIp = await rateLimit(`login:ip:${ip}`, LOGIN_MAX_POR_IP, LOGIN_WINDOW_SEC);
+        const porEmail = await rateLimit(`login:email:${emailKey}`, LOGIN_MAX_POR_EMAIL, LOGIN_WINDOW_SEC);
+        if (!porIp.ok || !porEmail.ok) return null;
+
+        const staff = await prisma.staff.findUnique({ where: { email } });
+
+        // Compara sempre, mesmo sem usuário, para o tempo de resposta ser parecido.
+        const validPassword = await bcrypt.compare(
+          password,
+          staff?.passwordHash ?? DUMMY_HASH
+        );
+        if (!staff || !validPassword) return null;
+
+        // Login certo: zera o contador de tentativas desse e-mail.
+        await prisma.rateLimit
+          .deleteMany({ where: { key: `login:email:${emailKey}` } })
+          .catch(() => {});
 
         return {
           id: staff.id,
