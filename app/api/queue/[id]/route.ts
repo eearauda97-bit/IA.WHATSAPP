@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { requireStaff } from "@/lib/auth";
 
 const patchSchema = z.object({
   action: z.enum(["confirm", "cancel"]),
@@ -10,7 +11,16 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // 1. Só funcionário logado pode alterar a fila.
+  let staff;
+  try {
+    staff = await requireStaff();
+  } catch {
+    return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
+  }
+
   const { id } = params;
+  const establishmentId = staff.establishmentId;
 
   let body: unknown;
   try {
@@ -30,7 +40,12 @@ export async function PATCH(
     );
   }
 
-  const entry = await prisma.queueEntry.findUnique({ where: { id } });
+  // 2. A entrada tem que ser do estabelecimento de quem está logado.
+  // Se não existir OU for de outro salão, a resposta é a mesma (404), para
+  // não revelar que aquele id existe em outro estabelecimento.
+  const entry = await prisma.queueEntry.findFirst({
+    where: { id, establishmentId },
+  });
 
   if (!entry) {
     return NextResponse.json(
@@ -50,7 +65,7 @@ export async function PATCH(
     }
 
     const updated = await prisma.queueEntry.update({
-      where: { id },
+      where: { id, establishmentId },
       data: { status: "CANCELLED" },
     });
 
@@ -67,7 +82,7 @@ export async function PATCH(
 
   if (entry.notifyExpiresAt && entry.notifyExpiresAt < new Date()) {
     const expired = await prisma.queueEntry.update({
-      where: { id },
+      where: { id, establishmentId },
       data: { status: "EXPIRED" },
     });
 
@@ -78,7 +93,7 @@ export async function PATCH(
   }
 
   const confirmed = await prisma.queueEntry.update({
-    where: { id },
+    where: { id, establishmentId },
     data: { status: "CONFIRMED", respondedAt: new Date() },
   });
 
