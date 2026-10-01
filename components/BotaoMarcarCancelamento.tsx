@@ -68,7 +68,7 @@ export default function BotaoMarcarCancelamento({
       if (!res.ok) {
         novoResultado = {
           tipo: "erro",
-          mensagem: data.error || "Erro ao marcar cancelamento.",
+          mensagem: data.error || "Erro ao liberar o horário.",
         };
       } else if (data.notifiedEntry) {
         novoResultado = {
@@ -105,10 +105,10 @@ export default function BotaoMarcarCancelamento({
           </span>
           <div>
             <p className="text-sm font-semibold text-ink">
-              Horário liberado?
+              Um horário vagou?
             </p>
             <p className="text-sm text-inkSecondary">
-              Marque o cancelamento e o próximo da fila é avisado no WhatsApp.
+              Registre o horário vago e o próximo da fila é avisado no WhatsApp.
             </p>
           </div>
         </div>
@@ -120,7 +120,7 @@ export default function BotaoMarcarCancelamento({
           className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-accentHover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
         >
           {loading && <IconSpinner />}
-          {loading ? "Marcando..." : "Marcar cancelamento"}
+          {loading ? "Liberando..." : "Liberar horário"}
         </button>
       </div>
 
