@@ -7,8 +7,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum QueueStatus {
@@ -37,6 +38,9 @@ model Establishment {
   queueEntries QueueEntry[]
   slots        Slot[]
   services     Service[]
+  businessHours BusinessHours[]
+  appointments  Appointment[]
+  
 }
 
 model Staff {
@@ -86,6 +90,8 @@ model QueueEntry {
   notifiedAt      DateTime?
   notifyExpiresAt DateTime?
   respondedAt     DateTime?
+    desiredDate     DateTime?
+  expiresAt       DateTime?
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -100,6 +106,8 @@ model Slot {
   startsAt        DateTime
   endsAt          DateTime
   claimedByEntry  String?
+  claimedByAppointmentId String? @unique
+  offerClosesAt          DateTime?
   createdAt       DateTime      @default(now())
 
   @@index([establishmentId, startsAt])
@@ -108,4 +116,57 @@ model RateLimit {
   key     String   @id
   count   Int
   resetAt DateTime
+}
+enum AppointmentStatus {
+  SCHEDULED
+  CANCELLED
+  DONE
+}
+
+model BusinessHours {
+  id              String        @id @default(cuid())
+  establishmentId String
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  weekday         Int
+  opensAt         String
+  closesAt        String
+
+  @@unique([establishmentId, weekday])
+}
+
+model Appointment {
+  id              String            @id @default(cuid())
+  establishmentId String
+  establishment   Establishment     @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  serviceId       String?
+  customerPhone   String
+  customerName    String?
+  startsAt        DateTime
+  endsAt          DateTime
+  status          AppointmentStatus @default(SCHEDULED)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([establishmentId, startsAt])
+  @@index([establishmentId, customerPhone])
+}
+
+model ConversationState {
+  id              String   @id @default(cuid())
+  establishmentId String
+  customerPhone   String
+  step            String
+  data            Json?
+  updatedAt       DateTime @updatedAt
+
+  @@unique([establishmentId, customerPhone])
+}
+
+model SlotOffer {
+  id           String   @id @default(cuid())
+  slotId       String
+  queueEntryId String
+  sentAt       DateTime @default(now())
+
+  @@unique([slotId, queueEntryId])
 }
