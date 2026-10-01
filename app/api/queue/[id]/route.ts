@@ -57,7 +57,7 @@ export async function PATCH(
   const { action } = parsed.data;
 
   if (action === "cancel") {
-    if (entry.status === "CONFIRMED" || entry.status === "CANCELLED") {
+    if (entry.status === "CANCELLED") {
       return NextResponse.json(
         { error: `Não é possível cancelar uma entrada com status ${entry.status}.` },
         { status: 409 }

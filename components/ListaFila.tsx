@@ -281,6 +281,23 @@ export default function ListaFila({
     setFiltroStatus((atual) => (atual === status ? null : status));
   }
 
+  async function cancelar(id: string) {
+    if (!window.confirm("Cancelar este cliente? Ninguém será chamado automaticamente.")) return;
+    await fetch(`/api/queue/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "cancel" }),
+    });
+    refetch();
+  }
+
+  async function chamarProximo() {
+    const res = await fetch("/api/queue/call-next", { method: "POST" });
+    const data = await res.json();
+    window.alert(data.message ?? data.error);
+    refetch();
+  }
+
   const naFilaAgora = stats.waiting + stats.notified;
 
   return (
@@ -322,15 +339,24 @@ export default function ListaFila({
           </p>
         </div>
 
-        {filtroStatus && (
+        <div className="flex shrink-0 items-center gap-2">
+          {filtroStatus && (
+            <button
+              type="button"
+              onClick={() => setFiltroStatus(null)}
+              className="rounded-lg px-3 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-accentSoft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              ← Ver todos
+            </button>
+          )}
           <button
             type="button"
-            onClick={() => setFiltroStatus(null)}
-            className="rounded-lg px-3 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-accentSoft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            onClick={chamarProximo}
+            className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-accentHover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
-            ← Ver todos
+            Chamar próximo
           </button>
-        )}
+        </div>
       </div>
 
       {/* Cards de filtro */}
@@ -444,6 +470,18 @@ export default function ListaFila({
                     </p>
                   )}
                 </div>
+
+                {(entry.status === "WAITING" ||
+                  entry.status === "NOTIFIED" ||
+                  entry.status === "CONFIRMED") && (
+                  <button
+                    type="button"
+                    onClick={() => cancelar(entry.id)}
+                    className="shrink-0 rounded-lg px-2.5 py-1 text-xs font-medium text-danger transition-colors hover:bg-dangerSoft"
+                  >
+                    Cancelar
+                  </button>
+                )}
 
                 <StatusBadge status={entry.status} />
               </li>
