@@ -10,7 +10,7 @@
 //   AUTH_SECRET=   (gerar com: npx auth secret)
 
 import crypto from "crypto";
-import NextAuth, { type DefaultSession } from "next-auth";
+import NextAuth, { CredentialsSignin, type DefaultSession } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
@@ -49,6 +49,13 @@ declare module "next-auth/jwt" {
   }
 }
 
+// Erro com código próprio para a tela de login diferenciar "muitas
+// tentativas" de "e-mail ou senha inválidos". O código chega ao navegador
+// em `result.code` (signIn de next-auth/react).
+class RateLimitedError extends CredentialsSignin {
+  code = "rate_limited";
+}
+
 // Hash de mentira, calculado uma vez. Quando o e-mail não existe, comparamos
 // a senha com ele só para gastar o mesmo tempo de um login real. Sem isso, dá
 // para descobrir quais e-mails existem medindo a demora da resposta.
@@ -79,14 +86,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const email = rawEmail.trim().toLowerCase();
 
         // Limite de tentativas, por IP e por e-mail. Acima do limite o login
-        // simplesmente falha (como se a senha estivesse errada). A chave do
-        // e-mail é um hash, para o e-mail não ficar em texto puro na tabela.
+        // falha com um erro de código próprio ("rate_limited"), que a tela
+        // mostra como "muitas tentativas". A chave do e-mail é um hash, para
+        // o e-mail não ficar em texto puro na tabela. O limite vale também
+        // para e-mails que não existem, então a mensagem não revela quais
+        // e-mails estão cadastrados.
         const ip = request ? getClientIp(request) : "unknown";
         const emailKey = crypto.createHash("sha256").update(email).digest("hex").slice(0, 16);
 
         const porIp = await rateLimit(`login:ip:${ip}`, LOGIN_MAX_POR_IP, LOGIN_WINDOW_SEC);
         const porEmail = await rateLimit(`login:email:${emailKey}`, LOGIN_MAX_POR_EMAIL, LOGIN_WINDOW_SEC);
-        if (!porIp.ok || !porEmail.ok) return null;
+        if (!porIp.ok || !porEmail.ok) throw new RateLimitedError();
 
         const staff = await prisma.staff.findUnique({ where: { email } });
 
