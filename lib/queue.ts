@@ -107,7 +107,7 @@ export async function getPosition(entry: QueueEntry): Promise<number> {
  * Libera o horário (Slot) que estava reservado para uma entrada, se houver,
  * e devolve o id dele para poder ser oferecido ao próximo compatível.
  */
-async function releaseSlotOf(entryId: string): Promise<string | undefined> {
+export async function releaseSlotOf(entryId: string): Promise<string | undefined> {
   const slot = await prisma.slot.findFirst({
     where: { claimedByEntry: entryId },
   });
